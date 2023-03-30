@@ -24,3 +24,9 @@ pip2 install xlwt bs4 numpy pandas xlrd openpyxl
 拉取自定义链接
 > python2 sample_and_date.py "https://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_m1673-s8059_1_1_0_1.html#showc"
 
+
+国外可爬网站
+
+https://www.gsmarena.com/
+
+https://www.gizmochina.com/
