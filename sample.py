@@ -1,4 +1,6 @@
 # -*- coding: UTF-8 -*-
+#!/usr/bin/env python2
+
 import re
 import sys
 import random
@@ -13,16 +15,7 @@ sys.setdefaultencoding('utf-8')
 
 
 urls = {
-        '2023': u'http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s10086_1_1_0_1.html',
-        '2022': u'http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s9277_1_1_0_1.html',
-        '2021': u'http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s8975_1_1_0_1.html',
-        '2020': u'http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s8379_1_1_0_1.html',
-        '2019': u'http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s8010_1_1_0_1.html',
-        '2018': u"http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s7500_1_1_0_1.html",
-        '2017': u"http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s7235_1_1_0_1.html",
-        '2016': u"http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s6472_1_1_0_1.html",
-        '2015': u"http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s6132_1_1_0_1.html",
-        '2014': u"http://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s5359_1_1_0_1.html"
+        'nfc': u'https://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s8059_1_1__1.html#showc'
     }
 
 
@@ -51,13 +44,14 @@ def zol_spider(year):
     for __column in range(11):
         sheet.write(0,__column,titles[__column])
     wb.save(wb_name)
+    rows = 1  # excel 行数索引
 
-    rows = 1  #excle 行数索引
-
+    detail_domain = "http://detail.detail_domainzol.com.cn"
     head = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36'}
 
     url = urls[year]
+    print url
     req = Request(url, headers=head)
     response = urlopen(req)
     html = response.read().decode('gbk')
@@ -76,11 +70,13 @@ def zol_spider(year):
         sys.exit(-1)
 
     # 生成所有待爬的网页
-    url_templet = url.replace('1.html', '')
+    #url_templet = url.replace('1.html', '')
+    unknown_list = []
 
     for i in range(total_page):  # 遍历，开爬
         print("page: ",i+1)
-        per_url = "%s%s%s" % (url_templet, i + 1, ".html")
+        per_url = url.replace('1.html', str(i + 1)+".html")
+        #print per_url
         req = Request(per_url, headers=head)
         response = urlopen(req)
         html = response.read().decode('gbk')
@@ -94,7 +90,7 @@ def zol_spider(year):
                 phone_price = phone_content.find("div", class_="date_price").find("b", class_="price-type").text
             except:
                 continue
-            sheet.write(rows,0,phone_name)
+            sheet.write(rows,0,phone_name.split('（' )[0])
             sheet.write(rows, 1, phone_price)
 
             detals = phone_content.find_all("li")
@@ -118,6 +114,33 @@ def zol_spider(year):
                     sheet.write(rows, par_index['ram'], i["title"])
                 elif u'ROM容量' in str(i):
                     sheet.write(rows, par_index['rom'], i["title"])
+            detail_url = phone_content.find("a", target="_blank")["href"]
+            phone_detail_url = detail_domain + detail_url
+            req = Request(phone_detail_url, headers=head)
+            response = urlopen(req)
+            html = response.read().decode('gbk')
+            soup = BeautifulSoup(html, 'html.parser')
+
+            # 以下是获取摄像头表格的代码↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+            tds = soup.find('td', class_="hd", text=u'基本参数')  # 表格标题
+            try:
+                camera_area = tds.parent.parent  # 摄像头总表格
+            except:
+                print "can not get camera info: ", phone_detail_url
+                rows += 1
+                continue
+            for tr in camera_area.find_all('tr'):
+                try:
+                    if tr.th.text == u'上市日期':
+                        sheet.write(rows, title_index['上市日期'], tr.td.span.contents[0])
+                    else:
+                        if tr.th.text not in unknown_list:
+                            print 'new parm: ', tr.th.text, phone_detail_url
+                            unknown_list.append(tr.th.text)
+                except:
+                    pass  # 大表格外面的标题为none，会报错
+            # 获取摄像头的代码结束↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+
 
             wb.save(wb_name)
             rows += 1
@@ -132,9 +155,12 @@ def zol_spider(year):
 if __name__ == "__main__":
     # zol_spider(2019)
     if len(sys.argv) <= 1:
-        zol_spider("2023")
+        zol_spider("nfc")
     elif sys.argv[1] in urls.keys():
         zol_spider(sys.argv[1])
+    elif sys.argv[1].__contains__("zol.com"):
+        urls["zol"]=sys.argv[1]
+        zol_spider("zol")
     else:
         print(repr(sys.argv[1]))
         print('wrong argument, only support {}'.format(urls.keys()))
