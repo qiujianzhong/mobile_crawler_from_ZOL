@@ -121,7 +121,9 @@ def zol_spider(year):
                     if tr.th.text == u'国内发布时间':
                         if tr.td.span.contents[0] != "":
                             sheet.write(rows, title_index['上市日期'], tr.td.span.contents[0])
-                            # print tr.td.span.contents[0]
+                    if tr.th.text == u'国外发布时间':
+                        if tr.td.span.contents[0] != "":
+                            sheet.write(rows, title_index['上市日期'], tr.td.span.contents[0])
                     if tr.th.text == u'上市日期':
                         if tr.td.span.contents[0] != "" and not str(tr.td.span.contents[0]).__contains__("href"):
                             sheet.write(rows, title_index['上市日期'], tr.td.span.contents[0])
