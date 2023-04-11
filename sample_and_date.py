@@ -1,4 +1,4 @@
-# -*- coding: UTF-8 -*-
+# -*- coding: utf-8 -*-
 import datetime
 import random
 import re
@@ -21,6 +21,9 @@ urls = {
     'test': u'https://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_m1673-s7075-s7318-s8059_1_1_0_1.html#showc',
     '2023': u'https://detail.zol.com.cn/cell_phone_advSearch/subcate57_1_s10086_1_1_0_1.html#showc'
 }
+
+# 已采集的手机型号
+mobiles = []
 
 
 def zol_spider(year):
@@ -76,11 +79,18 @@ def zol_spider(year):
 
         phones = result_frame.find_all("li")  # 匹配出单个手机的信息
         for phone_content in phones:
-            try:  # 获取价格
-                phone_name = phone_content.find("dl", class_="pro_detail").find("a").text
-                # print  phone_name
+            try:
+                phone_name = phone_content.find("dl", class_="pro_detail").find("a").text.split('（')[0]
+                if mobiles.__contains__(phone_name) :
+                    print phone_name + "已采集"
+                    continue
+                else:
+                    print phone_name + "要采集"
+                    mobiles.append(phone_name)
+                    print mobiles
+
                 phone_price = phone_content.find("div", class_="date_price").find("b", class_="price-type").text
-                sheet.write(rows, title_index['机型'], phone_name.split('（')[0])
+                sheet.write(rows, title_index['机型'], phone_name)
                 sheet.write(rows, title_index['价格'], phone_price)
 
             except:
@@ -144,7 +154,12 @@ def zol_spider(year):
 
 
 if __name__ == "__main__":
-    excel =""
+    excel = ""
+    data1 = pd.read_excel( open('old.xlsx','r'),  dtype=str, index_col=False, encoding='utf8', engine='xlrd')
+    for item in data1.values:
+        mobiles.append(str(item[0]))
+    print mobiles
+
     s = datetime.datetime.now().strftime('%y%m%d')
     if len(sys.argv) <= 1:
         zol_spider("nfc")
@@ -158,6 +173,7 @@ if __name__ == "__main__":
         excel = "zol"
     else:
         print('wrong argument, only support zol first page url')
+
 
     # 重写Excel 去重+排序
     data = pd.read_excel(excel + '.xls', 'zol', dtype=str)
